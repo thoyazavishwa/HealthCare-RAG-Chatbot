@@ -45,7 +45,7 @@ vectorstore/          # ChromaDB vector store
 ### Running the Chatbot
 Start the chatbot server:
 ```bash
-python app.py
+streamlit run app.py
 ```
 
 ## Usage
@@ -63,3 +63,4 @@ This project is for educational and research purposes. Please ensure compliance 
 ## Acknowledgements
 - [ChromaDB](https://www.trychroma.com/)
 - OpenAI and other LLM providers
+
