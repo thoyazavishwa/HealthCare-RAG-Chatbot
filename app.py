@@ -186,7 +186,6 @@ Context:
 """
 }
 
-
 prompt = PromptTemplate(
     template=PROMPTS[mode],
     input_variables=["context"]
