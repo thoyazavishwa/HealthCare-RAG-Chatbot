@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+
+# Environment variables
+.env
+
+# Data and vectorstore
+data/
+vectorstore/
