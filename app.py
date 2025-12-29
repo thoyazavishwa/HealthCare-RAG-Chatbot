@@ -443,7 +443,7 @@ if user_query:
             # Answer from memory only (NO RAG, but SAME role prompt)
             memory_context = build_contextual_question(user_query)
 
-            memory_prompt = prompt.format(
+            memory_prompt = prompt.format(   # dynamic prompt with selected persona. as streamlit reruns the script, mode is preserved.
                 context=memory_context
             )
 
