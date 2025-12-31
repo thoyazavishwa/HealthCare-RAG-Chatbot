@@ -94,7 +94,7 @@ Depth requirement (VERY IMPORTANT):
 
 Your role:
 - Explain clinical guidelines clearly and thoughtfully
-- Speak like a human expert, not a textbook
+- Speak with terms and reasoning a doctor would use
 - Rephrase, interpret, and connect ideas naturally
 - Maintain a professional, conversational tone
 
@@ -304,9 +304,13 @@ def summarize_chat():     # when turns exceed threshold, the summary is updated 
     )
 
     summary_prompt = f"""
-    Summarize the following conversation briefly.
-    Preserve important clinical context and user intent.
-    Avoid unnecessary detail.
+    Summarize the conversation into a compact clinical memory.
+
+    Rules:
+    - Preserve medical facts, user intent, and decision-critical context
+    - Maintain temporal order (symptoms progression, follow-ups)
+    - Remove redundancy and conversational filler
+    - Use neutral, clinical language
 
     Conversation:
     {convo}
@@ -372,6 +376,51 @@ def should_retrieve(user_query):         # a small LLM (4o-mini) to do intent no
     return decision == "NO"   # NO → need retrieval
 
 
+def classify_user_intent(user_query):
+    """
+    Classify the user's intent into a small, explicit set.
+    """
+
+    memory_text = ""
+
+    if st.session_state.chat_summary:
+        memory_text += "Summary:\n" + st.session_state.chat_summary + "\n\n"
+
+    if st.session_state.recent_messages:
+        memory_text += "Recent conversation:\n"
+        memory_text += "\n".join(
+            f"{m['role']}: {m['content']}"
+            for m in st.session_state.recent_messages
+        )
+
+    intent_prompt = f"""
+    You are classifying user intent in a medical conversation.
+
+    Conversation memory:
+    {memory_text}
+
+    New user question:
+    {user_query}
+
+    Choose EXACTLY ONE label:
+
+    ELABORATION     → asking why / explain more / deeper reasoning
+    REFRAME         → same facts, different style or role
+    CONSTRAINT      → narrowing scope (age, pregnancy, renal, etc.)
+    NEW_TOPIC       → different clinical subject
+    UNCLEAR         → cannot decide safely
+
+    Answer ONLY the label.
+    """
+
+    intent_llm = ChatOpenAI(
+        model="gpt-4o-mini",
+        temperature=0,
+        openai_api_key=OPENAI_API_KEY
+    )
+
+    return intent_llm.invoke(intent_prompt).content.strip().upper()
+
 
 # -------------------------------------------------
 # Render previous chat messages (UI only) as Streamlit reruns the entire script from top to bottom every time user interacts with it
@@ -411,7 +460,17 @@ if user_query:
         {"role": "user", "content": user_query}
     )
 
-    needs_retrieval = should_retrieve(user_query)
+    intent = classify_user_intent(user_query)
+
+    # Intent → retrieval mapping
+    if intent in ["NEW_TOPIC", "CONSTRAINT"]:
+        needs_retrieval = True
+    elif intent in ["ELABORATION", "REFRAME"]:
+        needs_retrieval = False
+    else:
+        # Fallback to safety
+        needs_retrieval = True
+
 
     with st.chat_message("assistant"):
         if needs_retrieval:
